@@ -33,7 +33,13 @@ numerical_features = [
 
 # Block IP using iptables and log to file
 def block_ip(ip_address):
-    if ip_address == '192.168.112.154':
+        WHITELIST = [
+        '192.168.112.154',   # This Ubuntu server's own IP
+        '192.168.112.1',     # VMware NAT gateway
+        '192.168.112.2',     # VMware DNS/DHCP
+        '192.168.112.255',   # Broadcast
+    ]
+    if ip_address in WHITELIST:
         print(f"Attempted to block server's own IP: {ip_address}. Skipping.")
         return
     # Check if the IP is already blocked
