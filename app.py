@@ -9,7 +9,7 @@ import os
 
 # Load the trained model and scaler
 script_dir = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(script_dir, 'model_and_scaler.joblib')
+model_path = os.path.join(script_dir, 'model_V3.joblib')
 data = joblib.load(model_path)
 model = data['model']
 scaler = data['scaler']
