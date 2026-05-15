@@ -1,26 +1,133 @@
-<!-- PFA custom rules for AI detections -->
-<group name="local,pfa,">
+<!-- PFA Project - Wazuh Manager Custom Rules
+     Project: PFA (AI-based Network Intrusion Detection System)
+     Wazuh Manager IP: 192.168.0.168
+     
+     Sections:
+       1. PFA AI-NIDS Rules        (rule IDs: 100100 - 100120)
+       2. Future: Nmap+Gemini      (rule IDs: 100200 - 100220) [reserved]
+       3. Future: VirusTotal API   (rule IDs: 100300 - 100320) [reserved]
+       4. Stock local rules sample (kept from original)
+-->
 
-  <!-- PFA AI: Attack detected by model -->
-  <rule id="200000" level="10">
-    <!-- Apply only to AI JSON logs on Ubuntu agent -->
+<group name="pfa_ai_nids,">
+
+  <!-- ============================================================ -->
+  <!-- RULE 100100: Any event from AI-NIDS log                      -->
+  <!-- Matches ALL JSON events written by app.py to blocked_ips.log -->
+  <!-- ============================================================ -->
+  <rule id="100100" level="3">
     <decoded_as>json</decoded_as>
-    <field name="location">/var/log/ai_nids/blocked_ips.log</field>
-    <!-- Match when the model classifies as Attack -->
-    <field name="event">Attack</field>
-    <description>PFA AI: Attack detected by machine learning model</description>
-    <group>pfa,attack,ai,</group>
-    <options>no_full_log</options>
+    <field name="event">\.+</field>
+    <description>PFA AI-NIDS: Event detected from AI model</description>
+    <group>pfa,ai_nids,</group>
   </rule>
 
-  <!-- PFA AI: Normal traffic (informational) -->
-  <rule id="200001" level="2">
-    <decoded_as>json</decoded_as>
-    <field name="location">/var/log/ai_nids/blocked_ips.log</field>
+  <!-- ============================================================ -->
+  <!-- RULE 100101: Normal traffic classified by AI model            -->
+  <!-- ============================================================ -->
+  <rule id="100101" level="3">
+    <if_sid>100100</if_sid>
     <field name="event">Normal</field>
-    <description>PFA AI: Traffic classified as normal</description>
-    <group>pfa,info,ai,</group>
-    <options>no_full_log</options>
+    <description>PFA AI-NIDS: Normal traffic classified by AI model</description>
+    <group>pfa,ai_nids,normal_traffic,</group>
+  </rule>
+
+  <!-- ============================================================ -->
+  <!-- RULE 100102: Attack detected by AI model (HIGH PRIORITY)     -->
+  <!-- Level 10 = triggers active response + dashboard alert        -->
+  <!-- ============================================================ -->
+  <rule id="100102" level="10">
+    <if_sid>100100</if_sid>
+    <field name="event">Attack</field>
+    <description>PFA AI-NIDS: Attack detected and IP blocked by AI model</description>
+    <group>pfa,ai_nids,attack_detected,</group>
+    <mitre>
+      <id>T1190</id>
+      <id>T1498</id>
+    </mitre>
+  </rule>
+
+  <!-- ============================================================ -->
+  <!-- RULE 100103: High-frequency attacks (same source repeated)   -->
+  <!-- Fires if 5+ attacks detected in 60 seconds from same source  -->
+  <!-- ============================================================ -->
+  <rule id="100103" level="12" frequency="5" timeframe="60">
+    <if_matched_sid>100102</if_matched_sid>
+    <description>PFA AI-NIDS: High-frequency attack detected - multiple blocks from same source</description>
+    <group>pfa,ai_nids,attack_flood,</group>
+    <mitre>
+      <id>T1498</id>
+      <id>T1499</id>
+    </mitre>
+  </rule>
+
+</group>
+
+
+<!-- ============================================================ -->
+<!-- FUTURE MODULE: Nmap + Gemini Integration                     -->
+<!-- Rule IDs 100200-100220 reserved for nmapscan.py output       -->
+<!-- Uncomment and configure when Nmap+Gemini module is ready     -->
+<!-- ============================================================ -->
+<!--
+<group name="pfa_nmap,">
+
+  <rule id="100200" level="5">
+    <decoded_as>json</decoded_as>
+    <field name="source">nmapscan</field>
+    <description>PFA Nmap: Network scan result received</description>
+    <group>pfa,nmap,</group>
+  </rule>
+
+  <rule id="100201" level="10">
+    <if_sid>100200</if_sid>
+    <field name="vulnerability">\.+</field>
+    <description>PFA Nmap+Gemini: Vulnerability identified on network host</description>
+    <group>pfa,nmap,vulnerability,</group>
+  </rule>
+
+</group>
+-->
+
+
+<!-- ============================================================ -->
+<!-- FUTURE MODULE: VirusTotal API Integration                    -->
+<!-- Rule IDs 100300-100320 reserved for VirusTotal alerts        -->
+<!-- ============================================================ -->
+<!--
+<group name="pfa_virustotal,">
+
+  <rule id="100300" level="6">
+    <decoded_as>json</decoded_as>
+    <field name="source">virustotal</field>
+    <description>PFA VirusTotal: File or URL scan result received</description>
+    <group>pfa,virustotal,</group>
+  </rule>
+
+  <rule id="100301" level="12">
+    <if_sid>100300</if_sid>
+    <field name="malicious">true</field>
+    <description>PFA VirusTotal: Malicious file or URL detected</description>
+    <group>pfa,virustotal,malware,</group>
+  </rule>
+
+</group>
+-->
+
+
+<!-- ============================================================ -->
+<!-- STOCK LOCAL RULES (kept from original local_rules.xml)       -->
+<!-- ============================================================ -->
+<group name="local,syslog,sshd,">
+
+  <!--
+  Dec 10 01:02:02 host sshd[1234]: Failed none for root from 1.1.1.1 port 1066 ssh2
+  -->
+  <rule id="100001" level="5">
+    <if_sid>5716</if_sid>
+    <srcip>1.1.1.1</srcip>
+    <description>sshd: authentication failed from IP 1.1.1.1.</description>
+    <group>authentication_failed,pci_dss_10.2.4,pci_dss_10.2.5,</group>
   </rule>
 
 </group>
