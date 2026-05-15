@@ -33,7 +33,7 @@ numerical_features = [
 
 # Block IP using iptables and log to file
 def block_ip(ip_address):
-        WHITELIST = [
+    WHITELIST = [
         '192.168.112.154',   # This Ubuntu server's own IP
         '192.168.112.1',     # VMware NAT gateway
         '192.168.112.2',     # VMware DNS/DHCP
